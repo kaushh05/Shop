@@ -1,0 +1,146 @@
+#! /bin/bash
+# eval_pa2 - grades PA2 performance and specifications
+#
+
+MAIN=python3 # may need to change python3 to python or py
+
+EXITCODE=0
+GRADE=0
+
+SOURCE="shop.py"
+DATA="ex1 ex2"
+REPORT="grade.txt"
+
+COMMENTS="author date"
+CHECKS="while-loop if-statement elif-statement integer-casting"
+
+
+echo "
+Programming Assignment 2
+**********************************
+Specification :" > $REPORT
+
+#
+# checks files by filenames
+#
+ 
+if [ -e $SOURCE -a -s $SOURCE ]
+then
+    echo "$SOURCE is present +2/2 points" >> $REPORT
+    ((GRADE = GRADE + 2))
+else
+    echo "$SOURCE is named incorrectly or absent +0/2 points" >> $REPORT
+    cp *.py $SOURCE    
+fi
+
+#
+# checks comments
+#
+
+f=$SOURCE
+
+for c in $COMMENTS
+do
+    grep -i "# *$c" $f > comments
+    if [ -e comments -a $(wc -l < comments) -eq 0 ]
+    then
+        echo "$f does not have a comment $c +0/1 points" >> $REPORT
+    else
+        echo "$f has a comment $c +1/1 points" >> $REPORT
+        ((GRADE = GRADE + 1))
+    fi
+done
+
+
+#
+# checks loops and conditional statements  
+#
+
+echo "
+**********************************
+Loops and Conditional Statements :" >> $REPORT
+
+    for k in $CHECKS
+    do
+        if [ $k == "while-loop" ]
+        then
+            grep -i "\bwhile .*:" $f > checks
+        elif [ $k == "if-statement" ]
+        then
+            grep -i "\bif .*:" $f > checks
+        elif [ $k == "elif-statement" ]
+        then
+            grep -i "\belif .*:" $f > checks
+        elif [ $k == "integer-casting" ]
+        then
+            grep -i "\bint *\(.*\)" $f > checks
+        fi
+        
+        if [ -e checks -a $(wc -l < checks) -eq 0 ]
+        then
+            echo "$f does not have $k +0/2 points" >> $REPORT
+        else
+            echo "$f has $k +2/2 points" >> $REPORT
+            ((GRADE = GRADE + 2))
+        fi
+    done
+
+echo "
+**********************************
+Performance :" >> $REPORT
+
+#
+# checks main application
+#
+
+if [ -e $SOURCE ]
+then
+
+#
+# checks output
+#   
+    for e in $DATA
+    do
+        $MAIN $SOURCE < $e > output 2> errors_$e &
+    PID=$!
+    sleep 2
+    kill -KILL $PID 2> /dev/null
+    echo >> $REPORT
+    echo "for input file $e:" >> $REPORT
+        if [ -e output -a $(wc -l < errors_$e) -eq 0 ]
+        then
+            echo "$SOURCE runs without errors +4/4 points" >> $REPORT
+            ((GRADE = GRADE + 4))
+        else
+            echo "$SOURCE does not run correctly +0/4 points" >> $REPORT
+        fi
+
+        diff -wB output $e.out >& dif_$e
+        if [ -e output -a $(wc -l < dif_$e) -eq 0 ]
+        then
+            echo "output is correct +10/10 points" >> $REPORT
+            ((GRADE = GRADE + 10))
+        else
+            echo "output is incorrect +0/10 points" >> $REPORT
+        fi
+ 
+    done
+else
+    echo "$SOURCE not implemented +0/40 points" >> $REPORT
+fi
+
+#
+# prints grade
+# 
+                echo "
+**********************************
+Your grade is $GRADE out of 40 
+
+        
+" >> $REPORT
+
+cat $REPORT
+#echo $GRADE > tmp
+rm output comments checks 
+
+exit $EXITCODE
